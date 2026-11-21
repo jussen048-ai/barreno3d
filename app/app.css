@@ -1,0 +1,128 @@
+/* Barreno 3D móvil — mismo tema del programa de escritorio (app/ui/tema.py) */
+:root{
+  --fondo:#14171b; --panel:#1b1f24; --panel-alto:#242a31; --borde:#2f363e; --campo:#101317;
+  --texto:#e8ebef; --sec:#8f99a5; --acento:#2ec4b6; --acento-osc:#1a6e67; --azul:#3d8fe0;
+  --aviso:#e6b84a; --error:#e5534b; --seguro:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--fondo);color:var(--texto);font:15px/1.45 "Segoe UI",Inter,Roboto,system-ui,sans-serif;
+     overscroll-behavior-y:contain}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--acento)}
+
+header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 14px;
+           background:var(--panel);border-bottom:1px solid var(--borde)}
+header.top img{width:28px;height:28px}
+header.top h1{font-size:17px;font-weight:700}
+header.top .ver{margin-left:auto;color:var(--sec);font-size:12px}
+
+main{padding:12px 12px calc(84px + var(--seguro));max-width:860px;margin:0 auto}
+.vista{display:none}.vista.on{display:block}
+h2{font-size:20px;margin:6px 2px 4px}
+.sub{color:var(--sec);font-size:13.5px;margin:0 2px 12px}
+
+nav.abajo{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);
+          background:var(--panel);border-top:1px solid var(--borde);padding-bottom:var(--seguro)}
+nav.abajo button{background:none;border:0;padding:9px 0 8px;display:flex;flex-direction:column;align-items:center;
+                 gap:2px;color:var(--sec);font-size:11.5px}
+nav.abajo button svg{display:block}
+nav.abajo button.on{color:var(--acento)}
+
+details.grupo,.tarjeta{background:var(--panel);border:1px solid var(--borde);border-radius:12px;margin-bottom:10px}
+details.grupo>summary{list-style:none;padding:12px 14px;font-weight:600;color:var(--acento);display:flex;align-items:center}
+details.grupo>summary::after{content:"▾";margin-left:auto;color:var(--sec);transition:transform .2s}
+details.grupo:not([open])>summary::after{transform:rotate(-90deg)}
+details.grupo>summary::-webkit-details-marker{display:none}
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:10px 10px;padding:0 14px 14px}
+.campos .ancho{grid-column:1/-1}
+label.c{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--sec)}
+label.c input,label.c select,textarea{background:var(--campo);border:1px solid var(--borde);border-radius:9px;padding:10px 11px;
+       font-size:16px;color:var(--texto);width:100%}
+label.c input:focus,label.c select:focus,textarea:focus{outline:none;border-color:var(--acento)}
+label.chk{display:flex;align-items:center;gap:9px;font-size:14.5px;padding:4px 0}
+label.chk input{width:20px;height:20px;accent-color:var(--acento)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:11px 16px;
+     background:var(--panel-alto);border:1px solid var(--borde);font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.98)}
+.btn.prim{background:var(--acento);border-color:var(--acento);color:#0b1514}
+.btn.ancho{width:100%}
+.btn[disabled]{opacity:.5}
+.fila-btn{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.fila-btn .btn{flex:1 1 auto}
+.pegado{position:sticky;bottom:calc(66px + var(--seguro));z-index:10;padding:8px 0 2px;
+        background:linear-gradient(transparent,var(--fondo) 35%)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+.kpi{background:var(--panel);border:1px solid var(--borde);border-radius:12px;padding:10px 12px}
+.kpi small{display:block;color:var(--sec);font-size:12px}
+.kpi b{display:block;font-size:20px;color:#fff}
+.kpi i{display:block;font-style:normal;color:var(--sec);font-size:11.5px}
+
+.opcion{padding:12px;display:grid;grid-template-columns:118px 1fr;gap:12px;cursor:pointer}
+.opcion:active{border-color:var(--acento)}
+.opcion svg{width:118px;height:118px;background:#101317;border-radius:9px}
+.opcion .fam{color:var(--acento);font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.opcion h3{font-size:15.5px;margin:2px 0 4px;color:#fff}
+.opcion p{color:var(--sec);font-size:13px}
+.opcion .err{color:var(--error)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{background:var(--panel-alto);border:1px solid var(--borde);border-radius:20px;padding:2px 9px;font-size:12px}
+
+.aviso{background:#2f2a1c;border:1px solid #5c4d24;color:var(--aviso);border-radius:10px;padding:10px 12px;
+       font-size:13.5px;margin:8px 0}
+.error{background:#33201f;border:1px solid #6b2c28;color:var(--error);border-radius:10px;padding:10px 12px;
+       font-size:13.5px;margin:8px 0}
+
+/* Hoja a pantalla completa (detalle) */
+.hoja{position:fixed;inset:0;z-index:40;background:var(--fondo);display:none;flex-direction:column}
+.hoja.on{display:flex}
+.hoja header{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);
+             border-bottom:1px solid var(--borde)}
+.hoja header h3{font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hoja header .x{background:var(--panel-alto);border:1px solid var(--borde);border-radius:9px;width:38px;height:38px;font-size:18px}
+.hoja .cuerpo{flex:1;overflow:auto;padding:12px 12px calc(20px + var(--seguro))}
+
+.lienzo{position:relative;background:#101317;border:1px solid var(--borde);border-radius:12px;overflow:hidden;
+        touch-action:none;height:58vh;min-height:300px}
+.lienzo svg{width:100%;height:100%;display:block}
+.lienzo .ctl{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.lienzo .ctl button{width:36px;height:36px;border-radius:9px;background:rgba(36,42,49,.92);border:1px solid var(--borde);font-size:17px}
+.lienzo .info{position:absolute;left:8px;bottom:8px;right:8px;background:rgba(27,31,36,.95);border:1px solid var(--borde);
+              border-radius:10px;padding:8px 10px;font-size:13px;display:none}
+.leyenda{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:12px;color:var(--sec);margin:8px 2px}
+.leyenda span{display:inline-flex;align-items:center;gap:5px}
+.leyenda i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.seg{display:flex;background:var(--panel);border:1px solid var(--borde);border-radius:10px;padding:3px;margin:8px 0}
+.seg button{flex:1;background:none;border:0;padding:7px 4px;border-radius:8px;font-size:13px;color:var(--sec)}
+.seg button.on{background:var(--acento-osc);color:#fff}
+
+.grafico{width:100%;height:260px;display:block;background:var(--panel);border:1px solid var(--borde);border-radius:12px;margin:8px 0}
+.tabla{width:100%;overflow:auto;border:1px solid var(--borde);border-radius:12px;margin:8px 0;max-height:360px}
+.tabla table{border-collapse:collapse;width:100%;font-size:13px}
+.tabla th,.tabla td{padding:7px 9px;border-bottom:1px solid var(--borde);text-align:right;white-space:nowrap}
+.tabla th{position:sticky;top:0;background:var(--panel-alto);color:var(--sec);font-weight:600}
+.tabla td:first-child,.tabla th:first-child{text-align:left}
+.tabla tr:nth-child(even) td{background:#181c21}
+
+.herr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.herr .tarjeta{padding:14px;margin:0;cursor:pointer}
+.herr .tarjeta b{display:block;font-size:22px;margin-bottom:6px}
+.herr .tarjeta h3{font-size:15px;color:#fff}
+.herr .tarjeta p{color:var(--sec);font-size:12.5px;margin-top:3px}
+
+#carga{position:fixed;inset:0;z-index:60;background:rgba(10,12,15,.82);display:none;align-items:center;justify-content:center;
+       flex-direction:column;gap:14px;text-align:center;padding:30px}
+#carga.on{display:flex}
+#carga .rueda{width:46px;height:46px;border-radius:50%;border:4px solid var(--borde);border-top-color:var(--acento);
+              animation:gira 1s linear infinite}
+#carga small{color:var(--sec)}
+@keyframes gira{to{transform:rotate(360deg)}}
+#tostada{position:fixed;left:50%;bottom:calc(90px + var(--seguro));transform:translateX(-50%);z-index:70;
+         background:var(--panel-alto);border:1px solid var(--borde);border-radius:10px;padding:10px 16px;display:none;
+         max-width:90vw;font-size:14px}
+#tostada.on{display:block}
+#vista3d{width:100%;height:62vh;border-radius:12px;overflow:hidden;background:#111418}
+.capas label.chk{border-bottom:1px solid var(--borde);padding:9px 2px}
+.ayuda{color:var(--sec);font-size:12.5px;padding:0 14px 12px}

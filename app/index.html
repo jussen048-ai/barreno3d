@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1f24">
+<title>Barreno 3D móvil</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icono-192.png">
+<link rel="apple-touch-icon" href="img/icono-192.png">
+<link rel="stylesheet" href="app.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<header class="top"><img src="img/icono-192.png" alt=""><h1>Barreno 3D</h1><span class="ver" id="ver">móvil</span></header>
+
+<main>
+  <!-- ============================ MALLA DEL FRENTE -->
+  <section class="vista on" id="v-malla">
+    <h2>Malla automática</h2>
+    <p class="sub">Escribe la sección, la roca y los taladros: el programa arma varias mallas completas, cada una con su tipo de arranque.</p>
+    <form id="f-malla" autocomplete="off">
+      <details class="grupo" open><summary>Sección</summary><div class="campos">
+        <label class="c">Ancho (m)<input name="ancho" type="number" step="0.05" value="3.5" inputmode="decimal"></label>
+        <label class="c">Alto (m)<input name="alto" type="number" step="0.05" value="3.5" inputmode="decimal"></label>
+        <label class="c">Forma<select name="forma" data-lista="formas"></select></label>
+        <label class="c">Flecha / radio (m)<input name="flecha" type="number" step="0.05" value="1.15" inputmode="decimal"></label>
+      </div></details>
+      <details class="grupo" open><summary>Roca</summary><div class="campos">
+        <label class="c ancho">Calidad<select name="roca" data-lista="rocas"></select></label>
+        <label class="chk ancho"><input type="checkbox" name="usar_rmr"> Usar mis datos (RMR y RQD)</label>
+        <label class="c">RMR<input name="rmr" type="number" step="1" value="50" inputmode="decimal"></label>
+        <label class="c">RQD (%)<input name="rqd" type="number" step="1" value="60" inputmode="decimal"></label>
+        <label class="c">Densidad (t/m³)<input name="densidad_roca" type="number" step="0.05" value="2.7" inputmode="decimal"></label>
+      </div></details>
+      <details class="grupo" open><summary>Taladros</summary><div class="campos">
+        <label class="c">Ø perforación (mm)<input name="diametro" type="number" step="1" value="38" inputmode="decimal"></label>
+        <label class="c">Ø alivio (mm)<input name="diametro_alivio" type="number" step="1" value="64" inputmode="decimal"></label>
+        <label class="c">N.º de alivios<input name="n_alivios" type="number" step="1" value="1" min="1" max="8" inputmode="numeric"></label>
+        <label class="c">Barra (pies)<input name="pies" type="number" step="1" value="6" inputmode="decimal"></label>
+      </div></details>
+      <details class="grupo"><summary>Explosivo</summary><div class="campos">
+        <label class="c ancho">Principal<select name="explosivo" data-lista="explosivos"></select></label>
+        <label class="c ancho">Contorno<select name="explosivo_contorno" data-lista="explosivos" data-vacio="El mismo"></select></label>
+        <label class="c">Largo cartucho (pulg)<input name="largo_cartucho_pulg" type="number" step="1" value="8" inputmode="decimal"></label>
+      </div><p class="ayuda">Los explosivos se editan en la pestaña «Más».</p></details>
+      <details class="grupo"><summary>Corte en V y cuneta</summary><div class="campos">
+        <label class="c ancho">Ángulo del corte en V (°)<input name="angulo_v" type="number" step="1" value="65" inputmode="decimal"></label>
+        <label class="chk ancho"><input type="checkbox" name="cuneta" checked> Poner cuneta</label>
+        <label class="c">Lado<select name="cuneta_lado"><option>izquierda</option><option>derecha</option></select></label>
+        <label class="c">Ancho (m)<input name="cuneta_ancho" type="number" step="0.05" value="0.35" inputmode="decimal"></label>
+        <label class="c">Profundidad (m)<input name="cuneta_prof" type="number" step="0.05" value="0.30" inputmode="decimal"></label>
+      </div></details>
+      <div class="pegado"><button class="btn prim ancho" type="submit">⚙ Generar mallas</button></div>
+    </form>
+    <div id="malla-msg"></div>
+    <div id="opciones"></div>
+  </section>
+
+  <!-- ============================ BANCO SOBRE TOPOGRAFÍA -->
+  <section class="vista" id="v-banco">
+    <h2>Malla sobre la topografía</h2>
+    <p class="sub">Abre un DXF con curvas de nivel (desde AutoCAD: Guardar como → DXF). Cada collar toma la cota del terreno.</p>
+    <div class="tarjeta" style="padding:14px">
+      <label class="btn ancho prim" for="archivo-dxf">📂 Abrir archivo DXF</label>
+      <input id="archivo-dxf" type="file" accept=".dxf,.DXF" hidden>
+      <div id="dxf-info" class="sub" style="margin:10px 0 0"></div>
+      <div id="dxf-capas" class="capas"></div>
+      <button class="btn ancho" id="b-tin" style="display:none;margin-top:10px">Crear superficie con las capas marcadas</button>
+    </div>
+    <form id="f-banco" autocomplete="off" style="display:none">
+      <details class="grupo" open><summary>Área de voladura</summary><div class="campos">
+        <label class="c ancho">Área<select name="area" id="sel-area"><option value="rect">Rectángulo</option></select></label>
+        <label class="c">Centro Este X<input name="cx" type="number" step="0.5" inputmode="decimal"></label>
+        <label class="c">Centro Norte Y<input name="cy" type="number" step="0.5" inputmode="decimal"></label>
+        <label class="c">Largo (m)<input name="largo" type="number" step="1" value="40" inputmode="decimal"></label>
+        <label class="c">Ancho (m)<input name="ancho" type="number" step="1" value="20" inputmode="decimal"></label>
+        <label class="c ancho">Azimut del largo (°)<input name="az_largo" type="number" step="5" value="90" inputmode="decimal"></label>
+      </div></details>
+      <details class="grupo" open><summary>Malla</summary><div class="campos">
+        <label class="c">Burden (m)<input name="burden" type="number" step="0.1" value="4" inputmode="decimal"></label>
+        <label class="c">Espaciamiento (m)<input name="espaciamiento" type="number" step="0.1" value="4.5" inputmode="decimal"></label>
+        <label class="c">Patrón<select name="patron" data-lista="patrones"></select></label>
+        <label class="c">Margen al borde (m)<input name="margen" type="number" step="0.1" value="1" inputmode="decimal"></label>
+        <label class="c">Azimut de salida (°)<input name="azimut" type="number" step="5" value="0" inputmode="decimal"></label>
+        <button class="btn" type="button" id="b-detectar" style="align-self:end">Detectar</button>
+      </div></details>
+      <details class="grupo"><summary>Banco y carga</summary><div class="campos">
+        <label class="c ancho">Fondo<select name="modo_piso" data-lista="pisos"></select></label>
+        <label class="c">Cota de piso (m)<input name="cota_piso" type="number" step="0.5" inputmode="decimal"></label>
+        <label class="c">Altura de banco (m)<input name="altura" type="number" step="0.5" value="10" inputmode="decimal"></label>
+        <label class="c">Sobreperforación (m)<input name="sobreperforacion" type="number" step="0.1" value="1.2" inputmode="decimal"></label>
+        <label class="c">Inclinación (°)<input name="inclinacion" type="number" step="1" value="90" inputmode="decimal"></label>
+        <label class="c">Ø (mm)<input name="diametro" type="number" step="1" value="165" inputmode="decimal"></label>
+        <label class="c">Taco (m)<input name="taco" type="number" step="0.1" value="3" inputmode="decimal"></label>
+        <label class="c ancho">Explosivo<select name="explosivo" data-lista="explosivos"></select></label>
+      </div></details>
+      <details class="grupo"><summary>Secuencia</summary><div class="campos">
+        <label class="c ancho">Tipo<select name="secuencia" data-lista="secuencias"></select></label>
+        <label class="c">Entre taladros (ms)<input name="ms_taladros" type="number" step="1" value="25" inputmode="decimal"></label>
+        <label class="c">Entre filas (ms)<input name="ms_filas" type="number" step="1" value="67" inputmode="decimal"></label>
+      </div></details>
+      <div class="pegado"><button class="btn prim ancho" type="submit">⚙ Calcular malla</button></div>
+    </form>
+    <div id="banco-msg"></div>
+    <div id="banco-res"></div>
+  </section>
+
+  <!-- ============================ ANÁLISIS -->
+  <section class="vista" id="v-analisis">
+    <h2>Análisis</h2>
+    <p class="sub">El mismo motor de cálculo del programa de escritorio.</p>
+    <div class="herr" id="herramientas"></div>
+  </section>
+
+  <!-- ============================ MÁS -->
+  <section class="vista" id="v-mas">
+    <h2>Más</h2>
+    <div class="tarjeta" style="padding:14px" id="instalar-caja">
+      <h3 style="margin-bottom:6px">Instalar en el teléfono</h3>
+      <p class="sub" style="margin:0 0 10px">Queda con su ícono y funciona sin internet después de abrirla una vez.</p>
+      <button class="btn prim ancho" id="b-instalar">📲 Instalar app</button>
+      <p class="sub" id="instalar-ayuda" style="margin:10px 0 0"></p>
+    </div>
+    <details class="grupo"><summary>Explosivos</summary>
+      <div id="lista-exp" style="padding:0 14px"></div>
+      <div class="campos" id="f-exp">
+        <label class="c ancho">Nombre<input name="nombre" placeholder="p. ej. Emulnor 3000 1¼&quot;x8&quot;"></label>
+        <label class="c">Tipo<select name="tipo"><option value="encartuchado">Encartuchado</option><option value="granel">Granel</option></select></label>
+        <label class="c">Densidad (g/cm³)<input name="densidad" type="number" step="0.01" value="1.14" inputmode="decimal"></label>
+        <label class="c">Ø cartucho (mm)<input name="diametro_cartucho" type="number" step="0.1" value="32" inputmode="decimal"></label>
+        <label class="c">VOD (m/s)<input name="vod" type="number" step="50" value="5000" inputmode="decimal"></label>
+        <label class="c">RWS (ANFO = 1)<input name="prp" type="number" step="0.01" value="1.0" inputmode="decimal"></label>
+        <button class="btn prim" type="button" id="b-add-exp" style="align-self:end">+ Agregar</button>
+      </div>
+      <p class="ayuda">Usa los datos de la ficha técnica del fabricante. Los genéricos son de referencia.</p>
+    </details>
+    <div class="tarjeta" style="padding:14px">
+      <h3>Acerca de</h3>
+      <p class="sub" style="margin:6px 0">Barreno 3D móvil usa el mismo motor de cálculo que el programa de Windows
+        (Python ejecutándose en tu teléfono). El simulador 3D completo y la lectura de DWG están en la versión de Windows.</p>
+      <a class="btn ancho" href="../">⬇ Versión para Windows</a>
+      <div class="aviso">⚠ Los diseños y cálculos son de referencia: verifícalos y ajústalos con pruebas de campo.</div>
+    </div>
+  </section>
+</main>
+
+<nav class="abajo">
+  <button class="on" data-v="v-malla"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="16" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="16" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="2.2"/></svg>Frente</button>
+  <button data-v="v-banco"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20l6-9 4 5 3-4 7 8z"/><path d="M4 7c3-2 6 2 9 0s5-2 7 0"/></svg>Banco</button>
+  <button data-v="v-analisis"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Análisis</button>
+  <button data-v="v-mas"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>Más</button>
+</nav>
+
+<div class="hoja" id="hoja"><header><h3 id="hoja-tit"></h3><button class="x" id="hoja-x">✕</button></header>
+  <div class="cuerpo" id="hoja-cuerpo"></div></div>
+<div id="carga"><div class="rueda"></div><div id="carga-txt">Cargando…</div>
+  <small>La primera vez descarga el motor de cálculo (unos 15 MB). Después funciona sin internet.</small></div>
+<div id="tostada"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
