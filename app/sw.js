@@ -1,6 +1,6 @@
 /* Barreno 3D móvil: funciona sin internet después de la primera visita. */
-const VERSION = "b3d-movil-3.1.0";
-const BASE = ["./", "index.html", "app.css", "app.js", "motor.js", "nucleo.zip", "manifest.webmanifest",
+const VERSION = "b3d-movil-3.3.0";
+const BASE = ["./", "index.html", "app.css", "app.js", "simulacion.js", "motor.js", "nucleo.zip", "manifest.webmanifest",
               "img/icono-192.png", "img/icono-512.png"];
 
 self.addEventListener("install", (e) => {

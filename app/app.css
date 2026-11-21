@@ -126,3 +126,13 @@ label.chk input{width:20px;height:20px;accent-color:var(--acento)}
 #vista3d{width:100%;height:62vh;border-radius:12px;overflow:hidden;background:#111418}
 .capas label.chk{border-bottom:1px solid var(--borde);padding:9px 2px}
 .ayuda{color:var(--sec);font-size:12.5px;padding:0 14px 12px}
+.sim-barra{position:absolute;left:0;right:0;bottom:0;padding:8px;background:linear-gradient(transparent,rgba(17,20,24,.95) 30%);
+           display:flex;flex-direction:column;gap:6px}
+.sim-hud{font-size:13px;color:#e8ebef;text-shadow:0 1px 2px #000}
+.sim-ctl{display:flex;gap:6px}
+.sim-ctl button{flex:0 0 48px;height:40px;border-radius:10px;background:rgba(36,42,49,.95);border:1px solid var(--borde);font-size:16px;color:#fff}
+.sim-ctl button[data-a="play"]{flex:1;background:var(--acento);color:#0b1514;font-weight:700;border-color:var(--acento)}
+.sim-fases{display:flex;gap:4px}
+.sim-fases button{flex:1;padding:6px 2px;border-radius:8px;font-size:12px;background:rgba(27,31,36,.95);border:1px solid var(--borde);color:var(--sec)}
+.sim-fases button.on{background:var(--acento-osc);color:#fff;border-color:var(--acento)}
+#vista3d{height:70vh}

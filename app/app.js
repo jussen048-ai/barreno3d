@@ -276,54 +276,16 @@ function zoomable(caja, alTocar) {
 /* ------------------------------------------------------------------ visor 3D (three.js) */
 let visor3d = null;
 async function abrir3D(caja, escena) {
-  caja.innerHTML = `<div class="sub">Cargando 3D…</div>`;
-  let THREE, OrbitControls;
+  caja.innerHTML = `<div class="sub" style="padding:12px">Cargando 3D…</div>`;
+  let THREE, OrbitControls, sim;
   try {
     THREE = await import("three");
     ({ OrbitControls } = await import("three/addons/controls/OrbitControls.js"));
-  } catch (e) { caja.innerHTML = `<div class="error">✖ No se pudo cargar el visor 3D (¿sin internet la primera vez?).</div>`; return; }
-  caja.innerHTML = "";
-  const W = caja.clientWidth, H = caja.clientHeight;
-  const ren = new THREE.WebGLRenderer({ antialias: true });
-  ren.setPixelRatio(Math.min(devicePixelRatio, 2)); ren.setSize(W, H); ren.setClearColor(0x111418);
-  caja.appendChild(ren.domElement);
-  const sc = new THREE.Scene();
-  sc.add(new THREE.AmbientLight(0xffffff, 0.75));
-  const luz = new THREE.DirectionalLight(0xffffff, 1.4); luz.position.set(3, 6, 5); sc.add(luz);
-  const cam = new THREE.PerspectiveCamera(45, W / H, 0.05, 5000);
-  const ctl = new OrbitControls(cam, ren.domElement); ctl.enableDamping = true;
-  const caja3 = new THREE.Box3();
-  for (const l of escena.lineas || []) {
-    const geo = new THREE.BufferGeometry().setFromPoints(l.p.map((p) => new THREE.Vector3(...p)));
-    const o = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: l.color, transparent: !!l.alfa, opacity: l.alfa || 1 }));
-    sc.add(o); caja3.expandByObject(o);
-  }
-  for (const t of escena.taladros || []) {
-    const a = new THREE.Vector3(...t.a), b = new THREE.Vector3(...t.b);
-    const L = a.distanceTo(b); if (L < 1e-6) continue;
-    const g = new THREE.CylinderGeometry(t.r, t.r, L, 10);
-    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: t.color, roughness: .6 }));
-    m.position.copy(a.clone().add(b).multiplyScalar(.5));
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-    sc.add(m); caja3.expandByObject(m);
-    if (t.carga) {
-      const c0 = a.clone().lerp(b, t.carga[0]), c1 = a.clone().lerp(b, t.carga[1]);
-      const gc = new THREE.CylinderGeometry(t.r * 1.35, t.r * 1.35, c0.distanceTo(c1), 10);
-      const mc = new THREE.Mesh(gc, new THREE.MeshStandardMaterial({ color: 0xe5534b, roughness: .5 }));
-      mc.position.copy(c0.clone().add(c1).multiplyScalar(.5)); mc.quaternion.copy(m.quaternion); sc.add(mc);
-    }
-  }
-  for (const s of escena.superficies || []) {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(s.v.flat(), 3)); geo.setIndex(s.i); geo.computeVertexNormals();
-    sc.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: s.color, transparent: true, opacity: s.alfa ?? .35, side: THREE.DoubleSide, depthWrite: false })));
-  }
-  const c = caja3.getCenter(new THREE.Vector3()), r = caja3.getSize(new THREE.Vector3()).length() || 5;
-  ctl.target.copy(c);
-  cam.position.copy(c.clone().add(new THREE.Vector3(...(escena.vista || [0.6, 0.45, 1])).normalize().multiplyScalar(r * 1.1)));
-  let vivo = true;
-  (function bucle() { if (!vivo) return; ctl.update(); ren.render(sc, cam); requestAnimationFrame(bucle); })();
-  visor3d = { cerrar() { vivo = false; ren.dispose(); } };
+    sim = await import("./simulacion.js");
+  } catch (e) { caja.innerHTML = `<div class="error">✖ No se pudo cargar el visor 3D (la primera vez necesita internet).</div>`; return; }
+  if (visor3d) visor3d.cerrar();
+  visor3d = sim.crearSimulacion(caja, escena, THREE, OrbitControls);
+  window.B3D_SIM = visor3d;
 }
 
 /* ================================================================== INICIO */
@@ -415,7 +377,7 @@ function detalleMalla(op) {
     <div class="seg" id="seg-et"><button data-e="retardo" class="on">Retardo</button><button data-e="kg">kg</button><button data-e="cart">Cartuchos</button><button data-e="nada">Sin texto</button></div>
     <div class="lienzo" id="lz"></div>
     <div class="leyenda">${funciones.map((f) => `<span><i style="background:${f === "Alivio" ? "transparent" : colorFun(f)};border:1px solid ${colorFun(f)}"></i>${esc(f)}</span>`).join("")}</div>
-    <div class="fila-btn"><button class="btn" id="b-3d">🧊 Ver en 3D</button><button class="btn" id="b-png">🖼 Imagen</button></div>
+    <div class="fila-btn"><button class="btn prim" id="b-3d">▶ Simulación 3D</button><button class="btn" id="b-png">🖼 Imagen</button></div>
     <div class="fila-btn"><button class="btn" id="b-dxf">⬇ DXF del frente</button><button class="btn" id="b-dxf3">⬇ DXF 3D</button><button class="btn" id="b-danio">💥 Zona de daño</button></div>
     <div id="caja3d"></div>
     <p class="sub">${esc(op.descripcion)}</p>
@@ -440,17 +402,20 @@ function detalleMalla(op) {
   $("#b-3d").onclick = () => {
     const caja = $("#caja3d"); caja.innerHTML = `<div id="vista3d"></div>`;
     const L = (DATOS_MALLA.pies || 6) * 0.3048;
-    const taladros = op.taladros.map((t) => {
+    const taladros = op.taladros.map((t, i) => {
       const a = (t.azimut_rel || 0) * Math.PI / 180, l = t.longitud || L;
-      const b = [t.x + Math.sin(a) * l, t.y, -Math.cos(a) * l];
       const alivio = t.tipo === "alivio";
-      return { a: [t.x, t.y, 0], b, r: Math.max(t.diametro / 2000, .015), color: alivio ? 0xdddddd : colorFun(t.funcion), carga: alivio ? null : [0.25, 1] };
+      return { a: [t.x, t.y, 0], b: [t.x + Math.sin(a) * l, t.y, -Math.cos(a) * l], r: Math.max(t.diametro / 2000, .015),
+               color: alivio ? 0xdddddd : colorFun(t.funcion), carga: alivio ? null : [0.3, 1], t: alivio ? null : (t.retardo || 0), orden: i };
     });
     const c = op.contorno.concat([op.contorno[0]]);
     const lineas = [{ p: c.map(([x, y]) => [x, y, 0]), color: 0xe8ebef }];
-    for (const d of [1.5, 3]) lineas.push({ p: c.map(([x, y]) => [x, y, d]), color: 0x3a424c });
-    for (const [x, y] of op.contorno.filter((_, i) => i % 3 === 0)) lineas.push({ p: [[x, y, 0], [x, y, 3]], color: 0x2f363e });
-    abrir3D($("#vista3d"), { taladros, lineas, vista: [0.55, 0.35, 1] });
+    for (const d of [2, 4]) lineas.push({ p: c.map(([x, y]) => [x, y, d]), color: 0x3a424c });
+    for (const [x, y] of op.contorno.filter((_, i) => i % 3 === 0)) lineas.push({ p: [[x, y, 0], [x, y, 4]], color: 0x2f363e });
+    lineas.push({ p: c.map(([x, y]) => [x, y, -L]), color: 0x2f363e });
+    const ys = op.contorno.map((p) => p[1]);
+    abrir3D($("#vista3d"), { taladros, lineas, vista: [0.55, 0.35, 1], roca: { tipo: "frente", contorno: op.contorno, prof: (op.avance || 0.9 * L) },
+                             piso: Math.min(...ys), radio: 0.9, paso_s: 0.35 });
     $("#vista3d").scrollIntoView({ behavior: "smooth" });
   };
 }
@@ -533,7 +498,7 @@ function pintarBanco() {
     ${b.avisos.map((a) => `<div class="aviso">⚠ ${esc(a)}</div>`).join("")}
     <div class="lienzo" id="lzb"></div>
     <p class="sub" style="margin-top:6px">Color = tiempo de salida · número = retardo · flecha = salida.</p>
-    <div class="fila-btn"><button class="btn" id="bb-3d">🧊 3D</button><button class="btn" id="bb-png">🖼 Imagen</button><button class="btn prim" id="bb-dxf">⬇ DXF</button></div>
+    <div class="fila-btn"><button class="btn prim" id="bb-3d">▶ Simulación 3D</button><button class="btn" id="bb-png">🖼 Imagen</button><button class="btn prim" id="bb-dxf">⬇ DXF</button></div>
     <div id="caja3db"></div>
     ${tabla(["Fila", "N.º", "Este", "Norte", "Cota", "H m", "L m", "kg", "Ret.", "ms"], b.taladros.map((t) => [t.fila, t.orden, t.x, t.y, t.z, t.altura, t.longitud, t.kg, t.retardo, t.ms ?? ""]))}`;
   $("#lzb").innerHTML = svgBanco(b) + `<div class="info" id="lzb-info"></div>`;
@@ -548,16 +513,21 @@ function pintarBanco() {
     const zc = b.taladros.reduce((p, t) => p + t.z, 0) / b.taladros.length;
     const P = (x, y, z) => [x - cx, z - zc, -(y - cy)];
     const inc = (fb.inclinacion || 90) * Math.PI / 180, az = (fb.azimut || 0) * Math.PI / 180, msMax = Math.max(1, ...b.taladros.map((t) => t.ms || 0));
-    const taladros = b.taladros.map((t) => { const h = Math.cos(inc) * t.longitud;
+    const taladros = b.taladros.map((t, i) => { const h = Math.cos(inc) * t.longitud;
       return { a: P(t.x, t.y, t.z), b: P(t.x + Math.sin(az) * h, t.y + Math.cos(az) * h, t.z - Math.sin(inc) * t.longitud),
-               r: Math.max((fb.diametro || 165) / 2000, .05), color: rampa((t.ms || 0) / msMax), carga: [(fb.taco || 0) / t.longitud, 1] }; });
+               r: Math.max((fb.diametro || 165) / 2000, .05), color: rampa((t.ms || 0) / msMax), carga: [(fb.taco || 0) / t.longitud, 1],
+               t: t.ms ?? t.retardo ?? 0, orden: i, altura: t.altura }; });
     const R = Math.max(...b.poligono.map(([x, y]) => Math.hypot(x - cx, y - cy))) * 1.8;
     const zs = TOPO.curvas.flatMap((c) => c.map((p) => p[2])); const z0 = Math.min(...zs), z1 = Math.max(...zs);
     const lineas = TOPO.curvas.filter((c) => c.some(([x, y]) => Math.hypot(x - cx, y - cy) < R)).map((c) => {
       const t = (c[0][2] - z0) / ((z1 - z0) || 1); return { p: c.filter(([x, y]) => Math.hypot(x - cx, y - cy) < R * 1.2).map(([x, y, z]) => P(x, y, z)), color: `hsl(${200 - 160 * t},45%,55%)` }; })
       .filter((l) => l.p.length > 1);
     lineas.push({ p: b.poligono.concat([b.poligono[0]]).map(([x, y]) => P(x, y, zc + 0.3)), color: 0x2ec4b6 });
-    abrir3D($("#vista3d"), { taladros, lineas, vista: [0.8, 0.7, 1] });
+    const pisoY = Math.min(...b.taladros.map((t) => t.z - t.altura)) - zc;
+    const conMs = b.taladros.some((t) => t.ms != null);
+    abrir3D($("#vista3d"), { taladros, lineas, vista: [0.8, 0.7, 1], piso: pisoY, salida: [Math.sin(az), -Math.cos(az)],
+      roca: { tipo: "banco", poligono: b.poligono.map(([x, y]) => [x - cx, -(y - cy)]), altura: Math.max(...b.taladros.map((t) => t.altura)) },
+      ms: conMs, paso_s: conMs ? 0.008 : 0.3, radio: Math.max(+fb.burden || 4, +fb.espaciamiento || 4) });
     $("#vista3d").scrollIntoView({ behavior: "smooth" });
   };
   $("#banco-res").scrollIntoView({ behavior: "smooth" });
